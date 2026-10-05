@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KRISH FREE FIRE TOURNAMENT</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#070a12;color:#fff}
+a{color:inherit}.wrap{max-width:1050px;margin:auto;padding:18px}.hero{border:1px solid #26304a;background:linear-gradient(145deg,#11182a,#090c15);border-radius:28px;padding:28px;text-align:center;box-shadow:0 20px 60px #0008}
+.logo{width:105px;height:105px;border-radius:24px;object-fit:cover;border:2px solid #ffffff22}.tag{color:#9ca8c7;margin:7px 0 0}.status{display:inline-flex;gap:8px;align-items:center;margin-top:15px;padding:8px 14px;border-radius:999px;background:#15203a;color:#a9f0c6;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:20px}.card{background:#0e1422;border:1px solid #222d46;border-radius:22px;padding:22px}.card h2{margin-top:0}.price{font-size:30px;font-weight:900}.slots{color:#aeb9d2;margin:7px 0 18px}
+button{border:0;border-radius:13px;padding:13px 17px;font-weight:900;cursor:pointer;background:#fff;color:#070a12}.primary{width:100%}
+input{width:100%;padding:13px;margin:7px 0 10px;border-radius:12px;border:1px solid #293650;background:#080d18;color:#fff;font-size:15px}.hidden{display:none!important}.muted{color:#9ca8c7}.msg{margin-top:12px;padding:12px;border-radius:12px;background:#141d31}.wa{background:#24d366;color:#03150a}.top{display:flex;justify-content:space-between;align-items:center;gap:10px}.adminlink{color:#8ea8ff;text-decoration:none}
+@media(max-width:750px){.grid{grid-template-columns:1fr}.hero{padding:22px}.wrap{padding:12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <img src="/krish.jpg" class="logo" alt="KRISH">
+    <h1 id="title">KRISH FREE FIRE TOURNAMENT</h1>
+    <div class="tag">🔥 Battle • Register • Compete • Win 🔥</div>
+    <div id="status" class="status">Checking registration...</div>
+  </section>
+
+  <div id="closed" class="card hidden" style="margin-top:20px;text-align:center">
+    <h2>Registration Closed</h2><p class="muted">The admin has temporarily turned the tournament website OFF.</p>
+  </div>
+
+  <section id="modes" class="grid">
+    <div id="soloCard" class="card">
+      <h2>🎯 SOLO</h2>
+      <div class="price" id="soloPrice">₹0</div>
+      <div class="slots" id="soloSlots">48 slots</div>
+      <form id="soloForm">
+        <input id="soloName" placeholder="Player Name" maxlength="80" required>
+        <input id="soloNumber" placeholder="Player Number" inputmode="numeric" maxlength="20" required>
+        <button class="primary wa" type="submit">📲 REGISTER SOLO</button>
+      </form>
+      <div id="soloMsg" class="msg hidden"></div>
+    </div>
+
+    <div id="squadCard" class="card">
+      <h2>👑 SQUAD</h2>
+      <div class="price" id="squadPrice">₹0</div>
+      <div class="slots" id="squadSlots">12 teams • 4 players each</div>
+      <form id="squadForm">
+        <input id="teamName" placeholder="Team Name" maxlength="80" required>
+        <input id="captainNumber" placeholder="Captain WhatsApp/Phone Number" inputmode="numeric" maxlength="20" required>
+        <input id="p1" placeholder="Player 1 Name" maxlength="80" required>
+        <input id="p2" placeholder="Player 2 Name" maxlength="80" required>
+        <input id="p3" placeholder="Player 3 Name" maxlength="80" required>
+        <input id="p4" placeholder="Player 4 Name" maxlength="80" required>
+        <button class="primary wa" type="submit">📲 REGISTER SQUAD</button>
+      </form>
+      <div id="squadMsg" class="msg hidden"></div>
+    </div>
+  </section>
+  <p style="text-align:center;margin:20px"><a class="adminlink" href="/admin">Admin Panel</a></p>
+</div>
+
+<script>
+let config={};
+
+async function load(){
+  try{
+    const r=await fetch('/api/config',{cache:'no-store'}); config=await r.json();
+    document.getElementById('title').textContent=config.tournamentName;
+    document.getElementById('status').textContent=config.webEnabled?'🟢 REGISTRATION OPEN':'🔴 REGISTRATION CLOSED';
+    document.getElementById('closed').classList.toggle('hidden',config.webEnabled);
+    document.getElementById('modes').classList.toggle('hidden',!config.webEnabled);
+    document.getElementById('soloCard').classList.toggle('hidden',!config.soloEnabled);
+    document.getElementById('squadCard').classList.toggle('hidden',!config.squadEnabled);
+    document.getElementById('soloPrice').textContent='₹'+config.soloPrice;
+    document.getElementById('squadPrice').textContent='₹'+config.squadPrice;
+    document.getElementById('soloSlots').textContent=`${config.soloAvailable} available / ${config.soloSlots} total`;
+    document.getElementById('squadSlots').textContent=`${config.squadAvailable} available / ${config.squadSlots} total teams`;
+  }catch(e){document.getElementById('status').textContent='⚠️ Server unavailable'}
+}
+function msg(id,text){const x=document.getElementById(id);x.textContent=text;x.classList.remove('hidden')}
+async function submit(type,payload,msgId){
+  msg(msgId,'⏳ Saving your registration...');
+  try{
+    const r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,...payload})});
+    const d=await r.json();
+    if(!r.ok) return msg(msgId,'❌ '+(d.error||'Registration failed'));
+    msg(msgId,`✅ Registration #${d.id} saved. Opening WhatsApp...`);
+    if(d.url) window.location.href=d.url;
+    else msg(msgId,'✅ Saved, but admin WhatsApp number is not configured yet.');
+    load();
+  }catch(e){msg(msgId,'❌ Network error. Please try again.')}
+}
+document.getElementById('soloForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  submit('solo',{playerName:soloName.value,playerNumber:soloNumber.value},'soloMsg');
+});
+document.getElementById('squadForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  submit('squad',{teamName:teamName.value,captainNumber:captainNumber.value,players:[p1.value,p2.value,p3.value,p4.value]},'squadMsg');
+});
+load();setInterval(load,20000);
+</script>
+</body>
+</html>

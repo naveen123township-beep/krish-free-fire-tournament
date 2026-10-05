@@ -1,0 +1,15 @@
+{
+  "name": "krish-free-fire-tournament-vercel",
+  "version": "2.0.0",
+  "private": true,
+  "description": "KRISH FREE FIRE TOURNAMENT - Vercel + Neon PostgreSQL",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

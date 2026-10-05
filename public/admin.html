@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KRISH Tournament Admin</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#070a12;color:#fff;font-family:Inter,system-ui,sans-serif}.wrap{max-width:1200px;margin:auto;padding:18px}
+.card{background:#0e1422;border:1px solid #26304a;border-radius:20px;padding:20px;margin-bottom:18px}input{width:100%;padding:12px;border-radius:10px;border:1px solid #293650;background:#080d18;color:#fff;margin:6px 0 10px}
+button{border:0;border-radius:10px;padding:11px 14px;font-weight:900;cursor:pointer;margin:3px}.primary{background:#fff}.green{background:#24d366}.red{background:#ff5570}.blue{background:#718cff}.muted{color:#9ca8c7}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{padding:15px;background:#141d31;border-radius:14px}.stat b{font-size:24px;display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:15px}.tog{display:flex;gap:8px;flex-wrap:wrap}.tog button.active{outline:2px solid #fff}
+.table{overflow:auto}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:11px;border-bottom:1px solid #202b42;text-align:left;vertical-align:top}.badge{padding:4px 8px;border-radius:999px;background:#18233a;font-size:12px}
+.hidden{display:none!important}.success{color:#9af2bb}.err{color:#ff9cac}
+@media(max-width:800px){.grid,.two{grid-template-columns:1fr 1fr}.grid .stat:last-child{grid-column:span 2}}@media(max-width:520px){.grid,.two{grid-template-columns:1fr}.grid .stat:last-child{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🔥 KRISH TOURNAMENT ADMIN</h1>
+<div id="login" class="card">
+<h2>Admin Login</h2><input id="password" type="password" placeholder="Admin password">
+<button class="primary" onclick="login()">LOGIN</button><p id="loginMsg" class="err"></p>
+</div>
+
+<div id="panel" class="hidden">
+<div class="grid">
+<div class="stat">Solo available<b id="sa">-</b></div>
+<div class="stat">Solo confirmed<b id="sc">-</b></div>
+<div class="stat">Squad available<b id="qa">-</b></div>
+<div class="stat">Squad confirmed<b id="qc">-</b></div>
+</div>
+
+<div class="card">
+<div class="two">
+<div>
+<h2>Website Controls</h2>
+<div class="tog">
+<button id="webOn" class="green" onclick="setToggle('web',true)">WEB ON</button>
+<button id="webOff" class="red" onclick="setToggle('web',false)">WEB OFF</button>
+<button id="bothOn" class="blue" onclick="bothOn()">BOTH ON</button>
+</div>
+<p class="muted">Both ON enables Solo + Squad. Web OFF closes all public registration.</p>
+</div>
+<div>
+<h2>Mode Controls</h2>
+<div class="tog">
+<button class="green" onclick="setToggle('solo',true)">SOLO ON</button>
+<button class="red" onclick="setToggle('solo',false)">SOLO OFF</button>
+<button class="green" onclick="setToggle('squad',true)">SQUAD ON</button>
+<button class="red" onclick="setToggle('squad',false)">SQUAD OFF</button>
+</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<h2>Tournament Settings</h2>
+<div class="two">
+<div><label>Tournament Name</label><input id="name"></div>
+<div><label>Admin WhatsApp Number</label><input id="wa" placeholder="919876543210"></div>
+<div><label>Solo Entry Price ₹</label><input id="soloPrice" type="number"></div>
+<div><label>Squad Entry Price ₹</label><input id="squadPrice" type="number"></div>
+<div><label>Solo Slots</label><input id="soloSlots" type="number"></div>
+<div><label>Squad Slots (teams)</label><input id="squadSlots" type="number"></div>
+</div>
+<button class="primary" onclick="save()">💾 SAVE SETTINGS</button>
+<span id="saveMsg" class="success"></span>
+</div>
+
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2>Registrations</h2><button onclick="load()">↻ REFRESH</button></div>
+<div class="table"><table><thead><tr><th>ID</th><th>Mode</th><th>Player / Team</th><th>Number</th><th>Players</th><th>Fee</th><th>Payment</th><th>Slot</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div>
+</div>
+<button class="red" onclick="logout()">LOGOUT</button>
+</div>
+</div>
+
+<script>
+let data={};
+async function login(){
+ const pw=document.getElementById('password').value;
+ const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+ const d=await r.json();
+ if(!r.ok){document.getElementById('loginMsg').textContent=d.error||'Login failed';return}
+ document.getElementById('login').classList.add('hidden');document.getElementById('panel').classList.remove('hidden');load();
+}
+async function load(){
+ const r=await fetch('/api/admin/data',{cache:'no-store'});
+ if(r.status===401){document.getElementById('login').classList.remove('hidden');panel.classList.add('hidden');return}
+ data=await r.json(); render();
+}
+function render(){
+ const s=data.settings;
+ sa.textContent=Math.max(0,s.solo_slots - data.registrations.filter(x=>x.type==='solo'&&['pending','confirmed'].includes(x.slot_status)).length);
+ sc.textContent=data.registrations.filter(x=>x.type==='solo'&&x.slot_status==='confirmed').length;
+ qa.textContent=Math.max(0,s.squad_slots - data.registrations.filter(x=>x.type==='squad'&&['pending','confirmed'].includes(x.slot_status)).length);
+ qc.textContent=data.registrations.filter(x=>x.type==='squad'&&x.slot_status==='confirmed').length;
+ name.value=s.tournament_name;wa.value=s.whatsapp;soloPrice.value=s.solo_price;squadPrice.value=s.squad_price;soloSlots.value=s.solo_slots;squadSlots.value=s.squad_slots;
+ rows.innerHTML=data.registrations.map(r=>{
+   const players=r.type==='squad'?(r.players_json||[]).join(', '):r.name;
+   const who=r.type==='solo'?r.name:r.team_name;
+   return `<tr>
+   <td>#${r.id}</td><td><span class="badge">${r.type.toUpperCase()}</span></td>
+   <td>${esc(who)}</td><td>${esc(r.player_number||'')}</td><td>${esc(players)}</td><td>₹${r.amount}</td>
+   <td><span class="badge">${r.payment_status}</span></td><td><span class="badge">${r.slot_status}</span></td>
+   <td>
+   <button class="green" onclick="updateReg(${r.id},'paid','confirmed')">CONFIRM</button>
+   <button class="blue" onclick="updateReg(${r.id},'pending','pending')">PENDING</button>
+   <button class="red" onclick="updateReg(${r.id},'rejected','rejected')">REJECT</button>
+   <button onclick="delReg(${r.id})">DELETE</button>
+   </td></tr>`;
+ }).join('');
+}
+function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+async function save(){
+ const body={tournamentName:name.value,whatsapp:wa.value,soloPrice:soloPrice.value,squadPrice:squadPrice.value,soloSlots:soloSlots.value,squadSlots:squadSlots.value,webEnabled:data.settings.web_enabled,soloEnabled:data.settings.solo_enabled,squadEnabled:data.settings.squad_enabled};
+ const r=await fetch('/api/admin/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ saveMsg.textContent=r.ok?'Saved ✓':'Save failed';setTimeout(()=>saveMsg.textContent='',1800);load();
+}
+async function setToggle(which,value){
+ const s=data.settings;
+ const body={tournamentName:s.tournament_name,whatsapp:s.whatsapp,soloPrice:s.solo_price,squadPrice:s.squad_price,soloSlots:s.solo_slots,squadSlots:s.squad_slots,webEnabled:which==='web'?value:s.web_enabled,soloEnabled:which==='solo'?value:s.solo_enabled,squadEnabled:which==='squad'?value:s.squad_enabled};
+ await fetch('/api/admin/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});load();
+}
+async function bothOn(){
+ const s=data.settings;
+ await fetch('/api/admin/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tournamentName:s.tournament_name,whatsapp:s.whatsapp,soloPrice:s.solo_price,squadPrice:s.squad_price,soloSlots:s.solo_slots,squadSlots:s.squad_slots,webEnabled:true,soloEnabled:true,squadEnabled:true})});load();
+}
+async function updateReg(id,paymentStatus,slotStatus){
+ const r=await fetch('/api/admin/registration/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentStatus,slotStatus})});
+ if(!r.ok){const d=await r.json();alert(d.error||'Update failed')} load();
+}
+async function delReg(id){
+ if(!confirm('Delete registration #'+id+'?'))return;
+ await fetch('/api/admin/registration/'+id,{method:'DELETE'});load();
+}
+async function logout(){await fetch('/api/admin/logout',{method:'POST'});location.reload()}
+</script>
+</body>
+</html>
